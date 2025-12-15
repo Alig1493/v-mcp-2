@@ -81,8 +81,11 @@ def generate_summary_table(results: dict[str, Any]) -> str:
         worst_severity = get_worst_severity(all_vulnerabilities)
         status_emoji = SEVERITY_EMOJI.get(worst_severity, '⚪')
 
+        # Create link to results folder
+        results_link = f"[{org_repo}](results/{org_repo}/violations.json)"
+
         lines.append(
-            f"| {org_repo} | {total_findings} | {worst_severity} | {status_emoji} |"
+            f"| {results_link} | {total_findings} | {worst_severity} | {status_emoji} |"
         )
 
     return "\n".join(lines)
@@ -132,15 +135,12 @@ def main():
     # Aggregate results
     results = aggregate_results(results_dir)
 
-    # Generate report
+    # Generate report (summary only, no details)
     summary = generate_summary_table(results)
-    detailed = generate_detailed_report(results)
-
-    report_content = summary + "\n" + detailed
 
     # Write to SCAN_RESULTS.md (not README.md)
     with open('SCAN_RESULTS.md', 'w') as f:
-        f.write(report_content)
+        f.write(summary)
 
     print("Generated SCAN_RESULTS.md with vulnerability summary")
 

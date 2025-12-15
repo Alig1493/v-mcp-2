@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from vmcp.orchestrator import ScanOrchestrator
-from vmcp.utils.aggregate_results import aggregate_results, generate_summary_table, generate_detailed_report
+from vmcp.utils.aggregate_results import aggregate_results, generate_summary_table
 from vmcp.utils.detect_language import detect_languages, select_scanners
 from vmcp.utils.enhance_cve_links import process_results_file
 
@@ -62,13 +62,11 @@ def aggregate_command(results_dir: str) -> None:
     print(f"Aggregating results from {results_dir}...")
     results = aggregate_results(results_dir)
 
+    # Generate summary only (no detailed section)
     summary = generate_summary_table(results)
-    detailed = generate_detailed_report(results)
-
-    report_content = summary + "\n" + detailed
 
     with open('SCAN_RESULTS.md', 'w') as f:
-        f.write(report_content)
+        f.write(summary)
 
     print("Generated SCAN_RESULTS.md with vulnerability summary")
 
