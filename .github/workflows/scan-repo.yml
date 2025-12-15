@@ -1,0 +1,126 @@
+name: Vulnerability Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_url:
+        description: 'Repository URL to scan'
+        required: true
+        type: string
+      scanners:
+        description: 'Scanners to use (comma-separated, leave empty for auto-detect)'
+        required: false
+        type: string
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout scan repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: |
+          uv sync
+
+      - name: Install scanners
+        run: |
+          # Install Trivy
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+          # Install OSV Scanner
+          curl -L https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64 -o /usr/local/bin/osv-scanner
+          chmod +x /usr/local/bin/osv-scanner
+
+          # Install Semgrep
+          pip install semgrep
+
+      - name: Parse scanners input
+        id: parse-scanners
+        run: |
+          if [ -n "${{ inputs.scanners }}" ]; then
+            # Convert comma-separated to space-separated for CLI
+            SCANNERS=$(echo "${{ inputs.scanners }}" | tr ',' ' ')
+            echo "scanners_arg=--scanners $SCANNERS" >> $GITHUB_OUTPUT
+          else
+            echo "scanners_arg=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run vulnerability scan
+        run: |
+          uv run python -m vmcp.cli scan "${{ inputs.repo_url }}" --output-dir results ${{ steps.parse-scanners.outputs.scanners_arg }}
+
+      - name: Upload scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-results
+          path: results/
+
+      - name: Aggregate results
+        run: |
+          uv run python -m vmcp.cli aggregate --results-dir results
+
+      - name: Commit results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add results/ SCAN_RESULTS.md
+          git commit -m "Add scan results for ${{ inputs.repo_url }}" || echo "No changes to commit"
+          git push
+
+  parallel-scan:
+    runs-on: ubuntu-latest
+    if: false  # Disabled by default, enable for multi-repo scanning
+    strategy:
+      matrix:
+        scanner: [trivy, osv-scanner, semgrep]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout scan repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: |
+          uv sync
+
+      - name: Install scanner
+        run: |
+          if [ "${{ matrix.scanner }}" = "trivy" ]; then
+            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          elif [ "${{ matrix.scanner }}" = "osv-scanner" ]; then
+            curl -L https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64 -o /usr/local/bin/osv-scanner
+            chmod +x /usr/local/bin/osv-scanner
+          elif [ "${{ matrix.scanner }}" = "semgrep" ]; then
+            pip install semgrep
+          fi
+
+      - name: Run scanner
+        run: |
+          uv run python -m vmcp.cli scan "${{ inputs.repo_url }}" --output-dir results --scanners ${{ matrix.scanner }}
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.scanner }}
+          path: results/
