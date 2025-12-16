@@ -4,6 +4,7 @@
 |---------|---------|-------|----------|------|--------|-----|---------|----------|--------|
 | [atomicchonk/roadrecon_mcp_server](https://github.com/atomicchonk/roadrecon_mcp_server) | [📋](results/atomicchonk-roadrecon_mcp_server-violations.json) | 0 | 0 | 0 | 0 | 0 | 0 | osv-scanner, semgrep, trivy | 🟢 |
 | [13bm/GhidraMCP](https://github.com/13bm/GhidraMCP) | [📋](results/13bm-GhidraMCP-violations.json) | 1 | 0 | 0 | 1 | 0 | 0 | osv-scanner, semgrep, trivy | 🟡 |
+| [gbrigandi/mcp-server-wazuh](https://github.com/gbrigandi/mcp-server-wazuh) | [📋](results/gbrigandi-mcp-server-wazuh-violations.json) | 12 | 0 | 0 | 12 | 0 | 0 | osv-scanner, semgrep, trivy | 🟡 |
 | [AIM-Intelligence/AIM-MCP](https://github.com/AIM-Intelligence/AIM-MCP) | [📋](results/AIM-Intelligence-AIM-MCP-violations.json) | 9 | 0 | 2 | 7 | 0 | 2 | osv-scanner, semgrep, trivy | 🔴 |
 | [BurtTheCoder/mcp-dnstwist](https://github.com/BurtTheCoder/mcp-dnstwist) | [📋](results/BurtTheCoder-mcp-dnstwist-violations.json) | 3 | 0 | 3 | 0 | 0 | 2 | osv-scanner, semgrep, trivy | 🔴 |
 | [BurtTheCoder/mcp-maigret](https://github.com/BurtTheCoder/mcp-maigret) | [📋](results/BurtTheCoder-mcp-maigret-violations.json) | 3 | 0 | 3 | 0 | 0 | 2 | osv-scanner, semgrep, trivy | 🔴 |
