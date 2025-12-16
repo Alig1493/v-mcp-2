@@ -135,7 +135,21 @@ def generate_summary_table(results: dict[str, Any]) -> str:
         "|---------|-------|----------|------|--------|-----|---------|----------|--------|",
     ]
 
-    for org_repo, scanners in sorted(results.items()):
+    # Sort results by severity (best first), then by name
+    def sort_key(item):
+        org_repo, scanners = item
+        all_vulnerabilities = []
+        for scanner, vulnerabilities in scanners.items():
+            all_vulnerabilities.extend(vulnerabilities)
+
+        worst_severity = get_worst_severity(all_vulnerabilities)
+        severity_priority = SEVERITY_ORDER.get(worst_severity, 999)
+
+        # Sort by severity (lower is worse), then by name
+        # We want NONE (6) first, then WARNING (5), etc.
+        return (-severity_priority, org_repo)
+
+    for org_repo, scanners in sorted(results.items(), key=sort_key):
         # Collect all vulnerabilities across scanners
         all_vulnerabilities = []
         for scanner, vulnerabilities in scanners.items():
