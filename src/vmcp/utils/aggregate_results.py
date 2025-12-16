@@ -128,35 +128,18 @@ def get_scanners_used(scanners: dict[str, list]) -> str:
 
 def generate_summary_table(results: dict[str, Any]) -> str:
     """Generate summary table for README."""
-    lines = [
-        "# Vulnerability Scan Results",
-        "",
-        "| Project | Total | Critical | High | Medium | Low | Fixable | Scanners | Status |",
-        "|---------|-------|----------|------|--------|-----|---------|----------|--------|",
-    ]
+    # Prepare all row data first
+    rows = []
 
-    # Sort results by severity (best first), then by name
-    def sort_key(item):
-        org_repo, scanners = item
-        all_vulnerabilities = []
-        for scanner, vulnerabilities in scanners.items():
-            all_vulnerabilities.extend(vulnerabilities)
-
-        worst_severity = get_worst_severity(all_vulnerabilities)
-        severity_priority = SEVERITY_ORDER.get(worst_severity, 999)
-
-        # Sort by severity (lower is worse), then by name
-        # We want NONE (6) first, then WARNING (5), etc.
-        return (-severity_priority, org_repo)
-
-    for org_repo, scanners in sorted(results.items(), key=sort_key):
-        # Collect all vulnerabilities across scanners
+    for org_repo, scanners in results.items():
+        # Collect all vulnerabilities across scanners (done once)
         all_vulnerabilities = []
         for scanner, vulnerabilities in scanners.items():
             all_vulnerabilities.extend(vulnerabilities)
 
         total_findings = len(all_vulnerabilities)
         worst_severity = get_worst_severity(all_vulnerabilities)
+        severity_priority = SEVERITY_ORDER.get(worst_severity, 999)
         status_emoji = SEVERITY_EMOJI.get(worst_severity, '⚪')
 
         # Get severity breakdown
@@ -168,14 +151,35 @@ def generate_summary_table(results: dict[str, Any]) -> str:
         # Get scanners used
         scanners_used = get_scanners_used(scanners)
 
-        # Create link to results folder
-        results_link = f"[{org_repo}](results/{org_repo}/violations.json)"
+        # Store row data with sort key
+        rows.append({
+            'org_repo': org_repo,
+            'total': total_findings,
+            'severity_counts': severity_counts,
+            'fixable': fixable_count,
+            'scanners': scanners_used,
+            'status': status_emoji,
+            'sort_key': (-severity_priority, org_repo)  # Best first, then alphabetical
+        })
 
+    # Sort rows by severity (best first), then by name
+    rows.sort(key=lambda r: r['sort_key'])
+
+    # Generate table lines
+    lines = [
+        "# Vulnerability Scan Results",
+        "",
+        "| Project | Total | Critical | High | Medium | Low | Fixable | Scanners | Status |",
+        "|---------|-------|----------|------|--------|-----|---------|----------|--------|",
+    ]
+
+    for row in rows:
+        results_link = f"[{row['org_repo']}](results/{row['org_repo']}/violations.json)"
         lines.append(
-            f"| {results_link} | {total_findings} | "
-            f"{severity_counts['CRITICAL']} | {severity_counts['HIGH']} | "
-            f"{severity_counts['MEDIUM']} | {severity_counts['LOW']} | "
-            f"{fixable_count} | {scanners_used} | {status_emoji} |"
+            f"| {results_link} | {row['total']} | "
+            f"{row['severity_counts']['CRITICAL']} | {row['severity_counts']['HIGH']} | "
+            f"{row['severity_counts']['MEDIUM']} | {row['severity_counts']['LOW']} | "
+            f"{row['fixable']} | {row['scanners']} | {row['status']} |"
         )
 
     return "\n".join(lines)
