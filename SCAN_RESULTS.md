@@ -10,6 +10,7 @@
 | [sanyambassi/thales-cdsp-crdp-mcp-server](https://github.com/sanyambassi/thales-cdsp-crdp-mcp-server) | [📋](results/sanyambassi-thales-cdsp-crdp-mcp-server-violations.json) | 2 | 0 | 0 | 0 | 2 | 0 | osv-scanner, semgrep, trivy | 🟡 |
 | [StacklokLabs/osv-mcp](https://github.com/StacklokLabs/osv-mcp) | [📋](results/StacklokLabs-osv-mcp-violations.json) | 17 | 0 | 0 | 0 | 0 | 17 | osv-scanner, semgrep, trivy | 🟡 |
 | [13bm/GhidraMCP](https://github.com/13bm/GhidraMCP) | [📋](results/13bm-GhidraMCP-violations.json) | 1 | 0 | 0 | 1 | 0 | 0 | osv-scanner, semgrep, trivy | 🟡 |
+| [fosdickio/binary_ninja_mcp](https://github.com/fosdickio/binary_ninja_mcp) | [📋](results/fosdickio-binary_ninja_mcp-violations.json) | 2 | 0 | 0 | 2 | 0 | 0 | osv-scanner, semgrep, trivy | 🟡 |
 | [gbrigandi/mcp-server-wazuh](https://github.com/gbrigandi/mcp-server-wazuh) | [📋](results/gbrigandi-mcp-server-wazuh-violations.json) | 12 | 0 | 0 | 12 | 0 | 0 | osv-scanner, semgrep, trivy | 🟡 |
 | [mrexodia/ida-pro-mcp](https://github.com/mrexodia/ida-pro-mcp) | [📋](results/mrexodia-ida-pro-mcp-violations.json) | 3 | 0 | 0 | 3 | 0 | 0 | osv-scanner, semgrep, trivy | 🟡 |
 | [samvas-codes/dawshund_mcp](https://github.com/samvas-codes/dawshund_mcp) | [📋](results/samvas-codes-dawshund_mcp-violations.json) | 1 | 0 | 0 | 1 | 0 | 0 | osv-scanner, semgrep, trivy | 🟡 |
