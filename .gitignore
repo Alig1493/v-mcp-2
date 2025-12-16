@@ -34,4 +34,9 @@ Thumbs.db
 .trivy/
 
 .coverage
-examples
+
+# Test coverage reports (auto-generated)
+htmlcov/
+
+# Examples directory (auto-generated)
+examples/

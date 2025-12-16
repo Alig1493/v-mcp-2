@@ -46,18 +46,47 @@ def get_worst_severity(vulnerabilities: list[dict[str, Any]]) -> str:
 
 
 def aggregate_results(results_dir: str) -> dict[str, Any]:
-    """Aggregate all vulnerability results from scanner-specific and existing violations files."""
+    """Aggregate all vulnerability results from scanner-specific files and single violations.json."""
     aggregated = {}
     results_path = Path(results_dir)
 
-    # Find all violations files (both scanner-specific and existing violations.json)
-    scanner_files = list(results_path.glob('**/*-violations.json'))  # e.g., trivy-violations.json
-    existing_files = list(results_path.glob('**/violations.json'))   # existing aggregated files
-
-    all_files = scanner_files + existing_files
-
-    for violations_file in all_files:
+    # First, load existing violations.json if it exists (single source of truth)
+    violations_file = results_path / 'violations.json'
+    if violations_file.exists():
         with open(violations_file, 'r') as f:
+            content = f.read().strip()
+            if content:  # Only load if not empty
+                aggregated = json.loads(content)
+
+    # Find old per-repo violations.json files (for migration)
+    per_repo_files = []
+    for item in results_path.iterdir():
+        if item.is_dir():
+            repo_violations = item / 'violations.json'
+            if repo_violations.exists():
+                per_repo_files.append(repo_violations)
+            # Also check nested org/repo structure
+            for subitem in item.iterdir():
+                if subitem.is_dir():
+                    nested_violations = subitem / 'violations.json'
+                    if nested_violations.exists():
+                        per_repo_files.append(nested_violations)
+
+    # Merge old per-repo files
+    for per_repo_file in per_repo_files:
+        with open(per_repo_file, 'r') as f:
+            data = json.load(f)
+            for org_repo, scanner_results in data.items():
+                if org_repo not in aggregated:
+                    aggregated[org_repo] = {}
+                for scanner_name, vulnerabilities in scanner_results.items():
+                    aggregated[org_repo][scanner_name] = vulnerabilities
+
+    # Find scanner-specific files (e.g., trivy-violations.json from new scans)
+    scanner_files = list(results_path.glob('**/*-violations.json'))
+
+    for scanner_file in scanner_files:
+        with open(scanner_file, 'r') as f:
             data = json.load(f)
 
             # Merge scanner results for each repo
@@ -67,39 +96,37 @@ def aggregate_results(results_dir: str) -> dict[str, Any]:
 
                 # Merge scanner findings
                 for scanner_name, vulnerabilities in scanner_results.items():
-                    # Don't overwrite existing scanner data unless it's empty
-                    if scanner_name not in aggregated[org_repo]:
-                        aggregated[org_repo][scanner_name] = vulnerabilities
-                    elif not aggregated[org_repo][scanner_name] and vulnerabilities:
-                        # Replace empty data with non-empty data
-                        aggregated[org_repo][scanner_name] = vulnerabilities
+                    # Update with latest scanner data
+                    aggregated[org_repo][scanner_name] = vulnerabilities
 
     return aggregated
 
 
 def save_aggregated_results(results: dict[str, Any], results_dir: str) -> None:
-    """Save aggregated results to a single violations.json file for each repo."""
+    """Save aggregated results to a single violations.json file."""
     results_path = Path(results_dir)
+    results_path.mkdir(parents=True, exist_ok=True)
 
-    for org_repo, scanner_results in results.items():
-        # Create output directory for this repo
-        output_dir = results_path / org_repo.replace('/', os.sep)
-        output_dir.mkdir(parents=True, exist_ok=True)
+    # Save all results to single violations.json file
+    violations_file = results_path / 'violations.json'
 
-        # Save aggregated results
-        violations_file = output_dir / 'violations.json'
-        aggregated_data = {org_repo: scanner_results}
+    with open(violations_file, 'w') as f:
+        json.dump(results, f, indent=2, default=str)
 
-        with open(violations_file, 'w') as f:
-            json.dump(aggregated_data, f, indent=2, default=str)
+    print(f"Aggregated results saved to {violations_file}")
 
-        print(f"Aggregated results saved to {violations_file}")
+    # Remove scanner-specific files after aggregation
+    scanner_files = list(results_path.glob('**/*-violations.json'))
+    for scanner_file in scanner_files:
+        scanner_file.unlink()
+        print(f"Removed scanner-specific file: {scanner_file}")
 
-        # Remove scanner-specific files after aggregation
-        scanner_files = list(output_dir.glob('*-violations.json'))
-        for scanner_file in scanner_files:
-            scanner_file.unlink()
-            print(f"Removed scanner-specific file: {scanner_file}")
+    # Remove old per-repo violations.json files
+    old_violations_files = list(results_path.glob('**/violations.json'))
+    for old_file in old_violations_files:
+        if old_file != violations_file:  # Don't remove the new single file
+            old_file.unlink()
+            print(f"Removed old per-repo file: {old_file}")
 
 
 def count_by_severity(vulnerabilities: list[dict[str, Any]]) -> dict[str, int]:
@@ -174,7 +201,7 @@ def generate_summary_table(results: dict[str, Any]) -> str:
     ]
 
     for row in rows:
-        results_link = f"[{row['org_repo']}](results/{row['org_repo']}/violations.json)"
+        results_link = f"[{row['org_repo']}](results/violations.json)"
         lines.append(
             f"| {results_link} | {row['total']} | "
             f"{row['severity_counts']['CRITICAL']} | {row['severity_counts']['HIGH']} | "

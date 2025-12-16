@@ -1,132 +1,80 @@
-# VMCP - Vulnerability Management CI/CD Platform
+# VMCP - MCP Vulnerability Scanner
 
-Automated vulnerability scanning platform for GitHub repositories using multiple security scanners in parallel.
+Automated vulnerability scanning platform for MCP (Model Context Protocol) servers. Scan any public GitHub repository and track security vulnerabilities across the MCP ecosystem.
 
-## 🎯 What This Does
+## What This Does
 
-**This repository triggers a GitHub Action that:**
-1. ✅ Clones any public repository you specify
-2. ✅ Runs recommended scanners (or your choice of scanners)
-3. ✅ Publishes results to `results/<org>/<repo>/violations.json`
-4. ✅ Aggregates findings and updates a summary table in README.md
+This repository runs automated security scans on MCP servers and stores results centrally. No setup required on target repositories - just provide a URL and get comprehensive vulnerability reports.
 
-**No installation needed on target repositories!** This scans external repos and stores results here.
+**Key Features:**
+- 🔍 Scans any public GitHub repository
+- 🤖 Auto-detects languages and selects appropriate scanners
+- ⚡ Parallel scanner execution for fast results
+- 📊 Centralized vulnerability tracking
+- 🎯 Sorted by security status (cleanest MCPs first)
 
-## Features
+## Quick Start
 
-- **Multi-Scanner Support**: Runs Trivy, OSV Scanner, and Semgrep in parallel
-- **Language Detection**: Automatically detects repository languages and selects appropriate scanners
-- **CVE Link Enhancement**: Validates and enhances CVE links to point to detailed vulnerability information
-- **GitHub Actions Integration**: Ready-to-use workflow for automated scanning
-- **Aggregated Reporting**: Generates comprehensive vulnerability reports with severity-based status indicators
+1. **Trigger a scan**: Go to Actions → "Vulnerability Scan" → Run workflow
+2. **Input repository URL**: `https://github.com/org/mcp-repo`
+3. **View results**: Check [SCAN_RESULTS.md](SCAN_RESULTS.md) for the summary table
 
-## Installation
-
-### Prerequisites
-
-- Python 3.13+
-- uv (Python package manager)
-- Git
-
-### Install from source
-
-```bash
-# Clone the repository
-git clone <this-repo-url>
-cd v-mcp-2
-
-# Install with uv
-uv sync
-
-# Install the CLI tool
-uv pip install -e .
-```
-
-## Usage
-
-### CLI Usage
-
-#### Scan a repository
-
-```bash
-# Auto-detect scanners based on repository language
-vmcp scan https://github.com/org/repo
-
-# Use specific scanners
-vmcp scan https://github.com/org/repo --scanners trivy osv-scanner semgrep
-
-# Specify output directory
-vmcp scan https://github.com/org/repo --output-dir ./my-results
-```
-
-#### Aggregate results
-
-```bash
-# Aggregate all scan results and generate README
-vmcp aggregate --results-dir results
-```
-
-### GitHub Actions Usage (Primary Method)
-
-**🚀 Quick Start:**
-
-1. **Setup** (One-time):
-   - Create a `PR_CREATE_PAT` token with `repo` and `workflow` permissions
-   - Add it to repository secrets
-   - See [docs/SETUP_PR_TOKEN.md](docs/SETUP_PR_TOKEN.md) for detailed instructions
-
-2. **Run a Scan**:
-   - Go to **Actions** tab in your GitHub repository
-   - Select **"Vulnerability Scan"** workflow
-   - Click **"Run workflow"** button
-   - Enter:
-     - **Repository URL**: `https://github.com/org/target-repo` (the repo to scan)
-     - **Scanners**: Leave empty for auto-detect, or specify: `trivy,semgrep,osv-scanner`
-   - Click **"Run workflow"** to start
-
-3. **Review Results**:
-   - A pull request is automatically created with scan results
-   - Review `results/<org>/<repo>/violations.json` for detailed findings
-   - Check `SCAN_RESULTS.md` for summary table
-   - Merge the PR when ready
-
-**📊 PR Contents:**
-- Branch: `scan-results/<org>-<repo>-<timestamp>`
-- Files changed: `results/` directory and `SCAN_RESULTS.md`
-- Labels: `automated`, `security`, `vulnerability-scan`
-
-**See [QUICK_START.md](QUICK_START.md) for detailed instructions.**
-
-## Project Structure
+## How It Works
 
 ```
-v-mcp-2/
-├── src/vmcp/
-│   ├── __init__.py
-│   ├── models.py              # Pydantic models for vulnerabilities
-│   ├── cli.py                 # CLI entry point
-│   ├── orchestrator.py        # Parallel scanner orchestration
-│   ├── scanners/
-│   │   ├── __init__.py
-│   │   ├── base.py           # Base scanner interface
-│   │   ├── trivy.py          # Trivy scanner implementation
-│   │   ├── osv.py            # OSV scanner implementation
-│   │   └── semgrep.py        # Semgrep scanner implementation
-│   └── utils/
-│       ├── detect_language.py    # Language detection
-│       ├── enhance_cve_links.py  # CVE link enhancement
-│       └── aggregate_results.py  # Results aggregation
-├── .github/workflows/
-│   └── scan-repo.yml         # GitHub Actions workflow
-├── pyproject.toml
-└── README.md
+User Triggers Workflow
+         ↓
+Clone Target Repository
+         ↓
+Detect Languages → Select Scanners
+         ↓
+┌────────────────────────────┐
+│  Run Scanners (Parallel)   │
+│  • Trivy                    │
+│  • OSV Scanner              │
+│  • Semgrep                  │
+└────────────────────────────┘
+         ↓
+Aggregate Results
+         ↓
+Generate SCAN_RESULTS.md
+         ↓
+Create Pull Request
 ```
 
-## Output Format
+**Target Repository**: Never modified - scanned in isolation
+**Your Repository**: Stores all vulnerability data in `results/` directory
 
-### Violations JSON
+## Scanners
 
-Results are saved to `results/<org>/<repo>/violations.json`:
+### Trivy
+Container and filesystem vulnerability scanner. Detects CVEs in dependencies, OS packages, and application libraries.
+
+**What it finds:** Known CVEs, outdated packages, security issues in container images
+
+### OSV Scanner
+Open Source Vulnerability database scanner. Checks dependencies against OSV database covering multiple ecosystems (PyPI, npm, Go, etc.).
+
+**What it finds:** Vulnerabilities in open source dependencies with detailed remediation info
+
+### Semgrep
+Static analysis security testing (SAST) tool. Analyzes source code for security patterns and potential vulnerabilities.
+
+**What it finds:** SQL injection, XSS, insecure crypto, hardcoded secrets, code quality issues
+
+## Results Format
+
+### SCAN_RESULTS.md
+Summary table with all scanned MCPs:
+
+| Project | Total | Critical | High | Medium | Low | Fixable | Scanners | Status |
+|---------|-------|----------|------|--------|-----|---------|----------|--------|
+| [org/repo](results/org/repo/violations.json) | 5 | 0 | 1 | 3 | 1 | 2 | trivy, osv-scanner, semgrep | 🟡 |
+
+**Sorted by security status**: MCPs with zero vulnerabilities appear first
+
+### violations.json
+Detailed findings per repository:
 
 ```json
 {
@@ -134,25 +82,10 @@ Results are saved to `results/<org>/<repo>/violations.json`:
     "trivy": [
       {
         "id": "CVE-2024-1234",
-        "identifier_type": "cve",
         "severity": "HIGH",
         "summary": "Vulnerability description",
-        "details": "Detailed information...",
-        "affected_range": "1.0.0",
-        "fixed_version": "1.0.1",
-        "references": [
-          {
-            "type": "web",
-            "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-1234"
-          }
-        ],
-        "scores": [
-          {
-            "type": "cvss",
-            "value": 7.5,
-            "version": "3.0"
-          }
-        ]
+        "fixed_version": "1.2.3",
+        "references": [{"url": "https://nvd.nist.gov/vuln/detail/CVE-2024-1234"}]
       }
     ],
     "semgrep": [...],
@@ -161,61 +94,86 @@ Results are saved to `results/<org>/<repo>/violations.json`:
 }
 ```
 
-### SCAN_RESULTS.md Summary
+## GitHub Actions Workflow
 
-Generated summary table includes detailed vulnerability breakdown:
+The workflow runs automatically when triggered:
 
-| Project | Total | Critical | High | Medium | Low | Fixable | Scanners | Status |
-|---------|-------|----------|------|--------|-----|---------|----------|--------|
-| [org/repo](results/org/repo/violations.json) | 42 | 5 | 12 | 20 | 5 | 18 | trivy, osv-scanner, semgrep | 🔴 |
+1. **Setup**: Install Python, scanners, dependencies
+2. **Matrix Scan**: Run each scanner in parallel on separate runners
+3. **Aggregate**: Merge all scanner results into single `violations.json`
+4. **Report**: Generate `SCAN_RESULTS.md` with summary table
+5. **PR Creation**: Automatically create pull request with findings
 
-**Columns Explained**:
-- **Project**: Link to detailed violations.json file
-- **Total**: Total number of vulnerabilities found
-- **Critical/High/Medium/Low**: Breakdown by severity level
-- **Fixable**: Number of vulnerabilities with available fixes/patches
-- **Scanners**: Which security scanners were used
-- **Status**: Visual severity indicator (🔴 Critical/High, 🟡 Medium/Low, 🟢 None)
+**Advantages:**
+- Fast execution (parallel scanning)
+- No data loss (scanner results merged properly)
+- Clean results (scanner-specific files removed after aggregation)
 
-This detailed breakdown helps security teams:
-- **Prioritize** critical and high severity issues immediately
-- **Estimate remediation effort** using the fixable count
-- **Verify scan coverage** by checking which scanners ran
-- **Track security posture** over time with severity metrics
+## Installation
 
-## Supported Scanners
+### Prerequisites
+- Python 3.13+
+- uv package manager
+- Git
 
-- **Trivy**: Container and filesystem vulnerability scanner
-- **OSV Scanner**: Open Source Vulnerability scanner
-- **Semgrep**: Static analysis security testing (SAST)
-
-## CVE Link Enhancement
-
-The platform automatically enhances CVE links:
-
-1. Validates if `https://nvd.nist.gov/vuln/detail/<CVE-ID>` exists
-2. Falls back to search URL if direct link unavailable
-3. Ensures all CVE references point to useful information
-
-## Development
-
-### Running tests
+### Local Usage
 
 ```bash
-# Install development dependencies
-uv sync --dev
+# Clone the repository
+git clone https://github.com/Alig1493/c-mcp-2.git
+cd v-mcp-2
 
-# Run tests (when implemented)
-pytest
+# Install dependencies
+uv sync
+
+# Scan a repository
+uv run python -m vmcp.cli scan https://github.com/org/mcp-repo --output-dir results
+
+# Aggregate results
+uv run python -m vmcp.cli aggregate --results-dir results
 ```
 
-### Adding new scanners
+## Project Structure
 
-1. Create a new scanner class in `src/vmcp/scanners/`
-2. Inherit from `BaseScanner`
-3. Implement `name` property and `scan()` method
-4. Add to `SCANNER_MAP` in `orchestrator.py`
-5. Update language detection mappings in `utils/detect_language.py`
+```
+v-mcp-2/
+├── src/vmcp/
+│   ├── cli.py              # CLI entry point
+│   ├── models.py           # Vulnerability data models
+│   ├── orchestrator.py     # Parallel scanner execution
+│   ├── scanners/           # Scanner implementations
+│   │   ├── trivy.py
+│   │   ├── osv.py
+│   │   └── semgrep.py
+│   └── utils/
+│       ├── detect_language.py     # Language detection
+│       ├── aggregate_results.py   # Results merging
+│       └── enhance_cve_links.py   # CVE link validation
+├── .github/workflows/
+│   └── scan-repo.yml       # GitHub Actions workflow
+├── results/                # Scan results (generated)
+├── SCAN_RESULTS.md        # Summary table (generated)
+└── README.md              # This file
+```
+
+## Configuration
+
+### Workflow Inputs
+
+- **repo_url** (required): GitHub repository URL to scan
+- **scanners** (optional): Comma-separated list of scanners, leave empty for auto-detect
+
+### Examples
+
+```yaml
+# Auto-detect scanners
+repo_url: https://github.com/org/mcp-repo
+scanners:
+
+# Specific scanners only
+repo_url: https://github.com/org/mcp-repo
+scanners: trivy,osv-scanner
+```
 
 ## License
 
@@ -223,4 +181,4 @@ MIT License
 
 ## Contributing
 
-Contributions welcome! Please open an issue or PR.
+Contributions welcome! Open an issue or pull request.
