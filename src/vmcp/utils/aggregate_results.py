@@ -47,18 +47,54 @@ def get_worst_severity(vulnerabilities: list[dict[str, Any]]) -> str:
 
 
 def aggregate_results(results_dir: str) -> dict[str, Any]:
-    """Aggregate all vulnerability results."""
-    results = {}
-    results_dir = Path('results')
-    violations_files = list(results_dir.glob('*_violations.json'))
+    """Aggregate all vulnerability results from scanner-specific and existing violations files."""
+    aggregated = {}
+    results_path = Path(results_dir)
 
-    # Find all violations.json files
-    for violations_files in violations_files:
-        with open(violations_files, 'r') as f:
+    # Find all violations files (both scanner-specific and existing violations.json)
+    scanner_files = list(results_path.glob('**/*-violations.json'))  # e.g., trivy-violations.json
+    existing_files = list(results_path.glob('**/violations.json'))   # existing aggregated files
+
+    all_files = scanner_files + existing_files
+
+    for violations_file in all_files:
+        with open(violations_file, 'r') as f:
             data = json.load(f)
-            results.update(data)
 
-    return results
+            # Merge scanner results for each repo
+            for org_repo, scanner_results in data.items():
+                if org_repo not in aggregated:
+                    aggregated[org_repo] = {}
+
+                # Merge scanner findings
+                for scanner_name, vulnerabilities in scanner_results.items():
+                    # Don't overwrite existing scanner data unless it's empty
+                    if scanner_name not in aggregated[org_repo]:
+                        aggregated[org_repo][scanner_name] = vulnerabilities
+                    elif not aggregated[org_repo][scanner_name] and vulnerabilities:
+                        # Replace empty data with non-empty data
+                        aggregated[org_repo][scanner_name] = vulnerabilities
+
+    return aggregated
+
+
+def save_aggregated_results(results: dict[str, Any], results_dir: str) -> None:
+    """Save aggregated results to a single violations.json file for each repo."""
+    results_path = Path(results_dir)
+
+    for org_repo, scanner_results in results.items():
+        # Create output directory for this repo
+        output_dir = results_path / org_repo.replace('/', Path.sep)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save aggregated results
+        violations_file = output_dir / 'violations.json'
+        aggregated_data = {org_repo: scanner_results}
+
+        with open(violations_file, 'w') as f:
+            json.dump(aggregated_data, f, indent=2, default=str)
+
+        print(f"Aggregated results saved to {violations_file}")
 
 
 def generate_summary_table(results: dict[str, Any]) -> str:
@@ -90,39 +126,6 @@ def generate_summary_table(results: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def generate_detailed_report(results: dict[str, Any]) -> str:
-    """Generate detailed report with per-scanner breakdown."""
-    lines = [
-        "",
-        "## Detailed Findings",
-        "",
-    ]
-
-    for org_repo, scanners in sorted(results.items()):
-        lines.append(f"### {org_repo}")
-        lines.append("")
-
-        for scanner, vulnerabilities in sorted(scanners.items()):
-            if vulnerabilities:
-                lines.append(f"#### Scanner: {scanner}")
-                lines.append(f"Found {len(vulnerabilities)} vulnerabilities")
-                lines.append("")
-
-                # Group by severity
-                by_severity = defaultdict(list)
-                for vuln in vulnerabilities:
-                    severity = vuln.get('severity', 'UNKNOWN')
-                    by_severity[severity].append(vuln)
-
-                for severity in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN', 'WARNING', 'NONE']:
-                    if severity in by_severity:
-                        lines.append(f"**{severity}**: {len(by_severity[severity])}")
-
-                lines.append("")
-
-    return "\n".join(lines)
-
-
 def main():
     import sys
 
@@ -133,6 +136,9 @@ def main():
 
     # Aggregate results
     results = aggregate_results(results_dir)
+
+    # Save aggregated results to violations.json
+    save_aggregated_results(results, results_dir)
 
     # Generate report (summary only, no details)
     summary = generate_summary_table(results)

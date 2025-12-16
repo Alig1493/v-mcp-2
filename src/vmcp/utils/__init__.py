@@ -1,7 +1,6 @@
 """Utility modules for VMCP."""
 from vmcp.utils.aggregate_results import (
     aggregate_results,
-    generate_detailed_report,
     generate_summary_table,
     get_worst_severity,
 )
@@ -17,7 +16,6 @@ from vmcp.utils.enhance_cve_links import (
 
 __all__ = [
     "aggregate_results",
-    "generate_detailed_report",
     "generate_summary_table",
     "get_worst_severity",
     "check_dependencies",

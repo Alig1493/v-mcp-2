@@ -8,9 +8,8 @@ import subprocess
 import tempfile
 
 from vmcp.orchestrator import ScanOrchestrator
-from vmcp.utils.aggregate_results import aggregate_results, generate_summary_table
+from vmcp.utils.aggregate_results import aggregate_results, generate_summary_table, save_aggregated_results
 from vmcp.utils.detect_language import detect_languages, select_scanners
-from vmcp.utils.enhance_cve_links import process_results_file
 
 
 async def scan_repository(repo_url: str, output_dir: str, scanners: list[str] | None = None) -> None:
@@ -48,22 +47,17 @@ async def scan_repository(repo_url: str, output_dir: str, scanners: list[str] | 
         orchestrator = ScanOrchestrator(str(repo_path), org_name, repo_name)
         results = await orchestrator.run_all_scanners(scanners)
 
-        # Save results
+        # Save results (scanner-specific files)
         orchestrator.save_results(results, output_dir)
-
-        # Enhance CVE links
-        results_dir = Path('results')
-        violations_files = list(results_dir.glob('*_violations.json'))
-        for violations_file in violations_files:
-            if violations_file.exists():
-                print("Enhancing CVE links...")
-                await process_results_file(str(violations_file))
 
 
 def aggregate_command(results_dir: str) -> None:
     """Aggregate results and generate scan results report."""
     print(f"Aggregating results from {results_dir}...")
     results = aggregate_results(results_dir)
+
+    # Save aggregated results to violations.json
+    save_aggregated_results(results, results_dir)
 
     # Generate summary only (no detailed section)
     summary = generate_summary_table(results)
