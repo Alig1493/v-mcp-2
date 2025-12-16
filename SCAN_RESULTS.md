@@ -7,6 +7,7 @@
 | [AIM-Intelligence/AIM-MCP](results/AIM-Intelligence-AIM-MCP-violations.json) | 9 | 0 | 2 | 7 | 0 | 2 | osv-scanner, semgrep, trivy | 🔴 |
 | [BurtTheCoder/mcp-dnstwist](results/BurtTheCoder-mcp-dnstwist-violations.json) | 3 | 0 | 3 | 0 | 0 | 2 | osv-scanner, semgrep, trivy | 🔴 |
 | [BurtTheCoder/mcp-maigret](results/BurtTheCoder-mcp-maigret-violations.json) | 3 | 0 | 3 | 0 | 0 | 2 | osv-scanner, semgrep, trivy | 🔴 |
+| [firstorderai/authenticator_mcp](results/firstorderai-authenticator_mcp-violations.json) | 3 | 0 | 2 | 1 | 0 | 2 | osv-scanner, semgrep, trivy | 🔴 |
 | [BurtTheCoder/mcp-shodan](results/BurtTheCoder-mcp-shodan-violations.json) | 5 | 1 | 4 | 0 | 0 | 4 | osv-scanner, semgrep, trivy | 🔴 |
 | [kontext-dev/attestable-mcp-server](results/kontext-dev-attestable-mcp-server-violations.json) | 12 | 1 | 6 | 5 | 0 | 8 | osv-scanner, semgrep, trivy | 🔴 |
 | [BurtTheCoder/mcp-virustotal](results/BurtTheCoder-mcp-virustotal-violations.json) | 5 | 1 | 4 | 0 | 0 | 4 | osv-scanner, semgrep, trivy | 🔴 |
