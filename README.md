@@ -15,6 +15,21 @@ This repository runs automated security scans on MCP servers and stores results 
 
 ## Quick Start
 
+### Using Makefile (Recommended)
+
+```bash
+# Scan with all scanners (auto-detect)
+make scan REPO_URL=https://github.com/org/mcp-repo
+
+# Scan with specific scanner
+make scan REPO_URL=https://github.com/org/mcp-repo SCANNERS=trivy
+
+# Scan with multiple scanners
+make scan REPO_URL=https://github.com/org/mcp-repo SCANNERS=trivy,osv-scanner,semgrep
+```
+
+### Using GitHub Actions UI
+
 1. **Trigger a scan**: Go to Actions → "Vulnerability Scan" → Run workflow
 2. **Input repository URL**: `https://github.com/org/mcp-repo`
 3. **View results**: Check [SCAN_RESULTS.md](SCAN_RESULTS.md) for the summary table
