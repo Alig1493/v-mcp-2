@@ -95,6 +95,12 @@ def save_aggregated_results(results: dict[str, Any], results_dir: str) -> None:
 
         print(f"Aggregated results saved to {violations_file}")
 
+        # Remove scanner-specific files after aggregation
+        scanner_files = list(output_dir.glob('*-violations.json'))
+        for scanner_file in scanner_files:
+            scanner_file.unlink()
+            print(f"Removed scanner-specific file: {scanner_file}")
+
 
 def generate_summary_table(results: dict[str, Any]) -> str:
     """Generate summary table for README."""
