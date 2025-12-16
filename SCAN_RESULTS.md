@@ -7,6 +7,7 @@
 | [sanyambassi/thales-cdsp-crdp-mcp-server](https://github.com/sanyambassi/thales-cdsp-crdp-mcp-server) | [📋](results/sanyambassi-thales-cdsp-crdp-mcp-server-violations.json) | 2 | 0 | 0 | 0 | 2 | 0 | osv-scanner, semgrep, trivy | 🟡 |
 | [StacklokLabs/osv-mcp](https://github.com/StacklokLabs/osv-mcp) | [📋](results/StacklokLabs-osv-mcp-violations.json) | 17 | 0 | 0 | 0 | 0 | 17 | osv-scanner, semgrep, trivy | 🟡 |
 | [13bm/GhidraMCP](https://github.com/13bm/GhidraMCP) | [📋](results/13bm-GhidraMCP-violations.json) | 1 | 0 | 0 | 1 | 0 | 0 | osv-scanner, semgrep, trivy | 🟡 |
+| [samvas-codes/dawshund_mcp](https://github.com/samvas-codes/dawshund_mcp) | [📋](results/samvas-codes-dawshund_mcp-violations.json) | 1 | 0 | 0 | 1 | 0 | 0 | osv-scanner, semgrep, trivy | 🟡 |
 | [adeptus-innovatio/solvitor-mcp](https://github.com/adeptus-innovatio/solvitor-mcp) | [📋](results/adeptus-innovatio-solvitor-mcp-violations.json) | 2 | 0 | 0 | 1 | 1 | 2 | osv-scanner, semgrep, trivy | 🟡 |
 | [zinja-coder/jadx-ai-mcp](https://github.com/zinja-coder/jadx-ai-mcp) | [📋](results/zinja-coder-jadx-ai-mcp-violations.json) | 1 | 0 | 0 | 1 | 0 | 1 | osv-scanner, semgrep, trivy | 🟡 |
 | [AIM-Intelligence/AIM-MCP](https://github.com/AIM-Intelligence/AIM-MCP) | [📋](results/AIM-Intelligence-AIM-MCP-violations.json) | 9 | 0 | 2 | 7 | 0 | 2 | osv-scanner, semgrep, trivy | 🔴 |
