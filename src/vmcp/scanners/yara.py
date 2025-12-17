@@ -19,7 +19,10 @@ class YaraScanner(BaseScanner):
 
     def __init__(self, repo_path: str, org_name: str, repo_name: str):
         super().__init__(repo_path, org_name, repo_name)
-        self.rules_path = Path(__file__).parent.parent.parent.parent / 'yara-forge-rules-core' / 'yara-rules-core.yar'
+        # Find the v-mcp-2 root directory (where yara-forge-rules-core is located)
+        current_file = Path(__file__).resolve()
+        vmcp_root = current_file.parent.parent.parent.parent
+        self.rules_path = vmcp_root / 'yara-forge-rules-core' / 'yara-rules-core.yar'
         self.max_file_size = 10 * 1024 * 1024  # 10MB limit per file
 
     @property
