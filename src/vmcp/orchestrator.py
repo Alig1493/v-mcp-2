@@ -9,16 +9,16 @@ from vmcp.scanners import OSVScanner, SemgrepScanner, TrivyScanner
 from vmcp.scanners.yara import YaraScanner
 from vmcp.scanners.base import BaseScanner
 
+SCANNER_MAP = {
+    'trivy': TrivyScanner,
+    'osv-scanner': OSVScanner,
+    'semgrep': SemgrepScanner,
+    'yara': YaraScanner,
+}
+
 
 class ScanOrchestrator:
     """Orchestrates multiple vulnerability scanners."""
-
-    SCANNER_MAP = {
-        'trivy': TrivyScanner,
-        'osv-scanner': OSVScanner,
-        'semgrep': SemgrepScanner,
-        'yara': YaraScanner,
-    }
 
     def __init__(self, repo_path: str, org_name: str, repo_name: str):
         self.repo_path = repo_path
@@ -42,13 +42,13 @@ class ScanOrchestrator:
     async def run_all_scanners(self, scanner_names: list[str] | None = None) -> dict[str, list[VulnerabilityModel]]:
         """Run all scanners in parallel."""
         if scanner_names is None:
-            scanner_names = list(self.SCANNER_MAP.keys())
+            scanner_names = list(SCANNER_MAP.keys())
 
         # Filter to only valid scanners
         scanner_classes = [
-            self.SCANNER_MAP[name]
+            SCANNER_MAP[name]
             for name in scanner_names
-            if name in self.SCANNER_MAP
+            if name in SCANNER_MAP
         ]
 
         # Run all scanners in parallel

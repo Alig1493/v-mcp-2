@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from vmcp.orchestrator import SCANNER_MAP
+
 
 SEVERITY_ORDER = {
     'CRITICAL': 0,
@@ -24,6 +26,11 @@ SEVERITY_EMOJI = {
     'WARNING': '🟡',
     'NONE': '🟢',
 }
+
+TEMP_SCANNER_FILE_NAMES = [
+    f"{scanner}-violations.json"
+    for scanner in SCANNER_MAP
+]
 
 
 def get_worst_severity(vulnerabilities: list[dict[str, Any]]) -> str:
@@ -61,22 +68,19 @@ def aggregate_results(results_dir: str) -> dict[str, Any]:
     per_repo_files = list(results_path.glob('*-*-violations.json'))
     for per_repo_file in per_repo_files:
         # Skip scanner-specific temp files
-        if per_repo_file.name in ['trivy-violations.json', 'osv-scanner-violations.json', 'semgrep-violations.json']:
-            continue
-
-        with open(per_repo_file, 'r') as f:
-            data = json.load(f)
-            for org_repo, scanner_results in data.items():
-                if org_repo not in aggregated:
-                    aggregated[org_repo] = {}
-                for scanner_name, vulnerabilities in scanner_results.items():
-                    aggregated[org_repo][scanner_name] = vulnerabilities
+        if not per_repo_file.name in TEMP_SCANNER_FILE_NAMES:
+            with open(per_repo_file, 'r') as f:
+                data = json.load(f)
+                for org_repo, scanner_results in data.items():
+                    if org_repo not in aggregated:
+                        aggregated[org_repo] = {}
+                    for scanner_name, vulnerabilities in scanner_results.items():
+                        aggregated[org_repo][scanner_name] = vulnerabilities
 
     # Load scanner-specific temporary files from new scans
     temp_scanner_files = [
-        results_path / 'trivy-violations.json',
-        results_path / 'osv-scanner-violations.json',
-        results_path / 'semgrep-violations.json',
+        results_path / temp_scanner_file_name 
+        for temp_scanner_file_name in TEMP_SCANNER_FILE_NAMES 
     ]
     for scanner_file in temp_scanner_files:
         if scanner_file.exists():
@@ -87,30 +91,6 @@ def aggregate_results(results_dir: str) -> dict[str, Any]:
                         aggregated[org_repo] = {}
                     for scanner_name, vulnerabilities in scanner_results.items():
                         aggregated[org_repo][scanner_name] = vulnerabilities
-
-    # Migration: Load old single violations.json if it exists
-    old_single_file = results_path / 'violations.json'
-    if old_single_file.exists():
-        with open(old_single_file, 'r') as f:
-            content = f.read().strip()
-            if content:
-                data = json.loads(content)
-                for org_repo, scanner_results in data.items():
-                    if org_repo not in aggregated:
-                        aggregated[org_repo] = {}
-                    for scanner_name, vulnerabilities in scanner_results.items():
-                        aggregated[org_repo][scanner_name] = vulnerabilities
-
-    # Migration: Load old nested directory structure files
-    old_nested_files = list(results_path.glob('**/*/violations.json'))
-    for old_file in old_nested_files:
-        with open(old_file, 'r') as f:
-            data = json.load(f)
-            for org_repo, scanner_results in data.items():
-                if org_repo not in aggregated:
-                    aggregated[org_repo] = {}
-                for scanner_name, vulnerabilities in scanner_results.items():
-                    aggregated[org_repo][scanner_name] = vulnerabilities
 
     return aggregated
 
@@ -137,26 +117,13 @@ def save_aggregated_results(results: dict[str, Any], results_dir: str) -> None:
     # Remove scanner-specific temporary files (trivy-violations.json, osv-scanner-violations.json, etc.)
     # These are from individual scanner runs, not the final per-repo files
     temp_scanner_files = [
-        results_path / 'trivy-violations.json',
-        results_path / 'osv-scanner-violations.json',
-        results_path / 'semgrep-violations.json',
+        results_path / temp_scanner_file_name 
+        for temp_scanner_file_name in TEMP_SCANNER_FILE_NAMES 
     ]
     for temp_file in temp_scanner_files:
         if temp_file.exists():
             temp_file.unlink()
             print(f"Removed temporary scanner file: {temp_file}")
-
-    # Remove old single violations.json if it exists
-    old_single_file = results_path / 'violations.json'
-    if old_single_file.exists():
-        old_single_file.unlink()
-        print(f"Removed old single violations.json file")
-
-    # Remove old nested directory structure files
-    old_violations_files = list(results_path.glob('**/*/violations.json'))
-    for old_file in old_violations_files:
-        old_file.unlink()
-        print(f"Removed old nested file: {old_file}")
 
 
 def count_by_severity(vulnerabilities: list[dict[str, Any]]) -> dict[str, int]:
