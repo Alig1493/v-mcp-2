@@ -12,10 +12,7 @@ from vmcp.utils.aggregate_results import aggregate_results, generate_summary_tab
 from vmcp.utils.detect_language import detect_languages, select_scanners
 
 
-async def scan_repository(repo_url: str, output_dir: str, scanners: list[str] | None = None) -> None:
-    """Scan a repository for vulnerabilities."""
-    # Clone repository
-
+def get_repo(repo_url: str):
     # Parse org/repo from URL
     if repo_url.endswith('.git'):
         repo_url = repo_url[:-4]
@@ -23,7 +20,12 @@ async def scan_repository(repo_url: str, output_dir: str, scanners: list[str] | 
     parts = repo_url.rstrip('/').split('/')
     repo_name = parts[-1]
     org_name = parts[-2] if len(parts) > 1 else 'unknown'
+    return org_name, repo_name
 
+
+async def scan_repository(repo_url: str, output_dir: str, scanners: list[str] | None = None) -> None:
+    """Scan a repository for vulnerabilities."""
+    org_name, repo_name = get_repo(repo_url)    
     # Clone to temp directory
     with tempfile.TemporaryDirectory() as temp_dir:
         repo_path = Path(temp_dir) / repo_name
@@ -51,13 +53,14 @@ async def scan_repository(repo_url: str, output_dir: str, scanners: list[str] | 
         orchestrator.save_results(results, output_dir)
 
 
-def aggregate_command(results_dir: str) -> None:
+def aggregate_command(repo_url: str, results_dir: str) -> None:
     """Aggregate results and generate scan results report."""
     print(f"Aggregating results from {results_dir}...")
-    results = aggregate_results(results_dir)
+    org_name, repo_name = get_repo(repo_url)
+    results = aggregate_results(org_name, repo_name, results_dir)
 
     # Save aggregated results to violations.json
-    save_aggregated_results(results, results_dir)
+    save_aggregated_results(org_name, repo_name, results, results_dir)
 
     # Generate summary only (no detailed section)
     summary = generate_summary_table(results)
@@ -81,6 +84,7 @@ def main():
 
     # Aggregate command
     agg_parser = subparsers.add_parser('aggregate', help='Aggregate scan results')
+    agg_parser.add_argument('repo_url', help='Repository URL to scan')
     agg_parser.add_argument('--results-dir', default='results', help='Results directory')
 
     args = parser.parse_args()
@@ -88,7 +92,7 @@ def main():
     if args.command == 'scan':
         asyncio.run(scan_repository(args.repo_url, args.output_dir, args.scanners))
     elif args.command == 'aggregate':
-        aggregate_command(args.results_dir)
+        aggregate_command(args.repo_url, args.results_dir)
     else:
         parser.print_help()
         sys.exit(1)

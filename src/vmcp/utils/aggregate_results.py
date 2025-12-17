@@ -52,7 +52,7 @@ def get_worst_severity(vulnerabilities: list[dict[str, Any]]) -> str:
     return worst_severity
 
 
-def aggregate_results(results_dir: str) -> dict[str, Any]:
+def aggregate_results(org_name: str, repo_name: str, results_dir: str) -> dict[str, Any]:
     """Aggregate all vulnerability results from per-repo and scanner-specific files."""
     aggregated = {}
     results_path = Path(results_dir)
@@ -60,12 +60,9 @@ def aggregate_results(results_dir: str) -> dict[str, Any]:
     # Find all violations.json files in the results directory
     # This includes:
     # 1. Per-repo files: <org>-<repo>-violations.json (new format)
-    # 2. Scanner temp files: trivy-violations.json, osv-scanner-violations.json, semgrep-violations.json
-    # 3. Old single file: violations.json (for migration)
-    # 4. Old nested files: org/repo/violations.json (for migration)
 
     # Load existing per-repo files in new format: <org>-<repo>-violations.json
-    per_repo_files = list(results_path.glob('*-*-violations.json'))
+    per_repo_files = list(results_path.glob(f'{org_name}-{repo_name}-violations.json'))
     for per_repo_file in per_repo_files:
         # Skip scanner-specific temp files
         if not per_repo_file.name in TEMP_SCANNER_FILE_NAMES:
@@ -95,24 +92,22 @@ def aggregate_results(results_dir: str) -> dict[str, Any]:
     return aggregated
 
 
-def save_aggregated_results(results: dict[str, Any], results_dir: str) -> None:
+def save_aggregated_results(org_name: str, repo_name: str, results: dict[str, Any], results_dir: str) -> None:
     """Save aggregated results to per-repo violations.json files."""
     results_path = Path(results_dir)
     results_path.mkdir(parents=True, exist_ok=True)
+    org_repo = {org_name}/{repo_name}
 
-    # Save each repo to its own violations file: <org>-<repo>-violations.json
-    for org_repo, scanner_results in results.items():
-        # Convert org/repo to org-repo format for filename
-        safe_filename = org_repo.replace('/', '-')
-        violations_file = results_path / f'{safe_filename}-violations.json'
+    # Convert org/repo to org-repo format for filename
+    violations_file = results_path / f'{org_name}-{repo_name}-violations.json'
 
-        # Save only this repo's data
-        repo_data = {org_repo: scanner_results}
+    # Save only this repo's data
+    repo_data = {org_repo: results[org_repo]}
 
-        with open(violations_file, 'w') as f:
-            json.dump(repo_data, f, indent=2, default=str)
+    with open(violations_file, 'w') as f:
+        json.dump(repo_data, f, indent=2, default=str)
 
-        print(f"Saved results to {violations_file}")
+    print(f"Saved results to {violations_file}")
 
     # Remove scanner-specific temporary files (trivy-violations.json, osv-scanner-violations.json, etc.)
     # These are from individual scanner runs, not the final per-repo files
@@ -220,13 +215,12 @@ def generate_summary_table(results: dict[str, Any]) -> str:
 def main():
     import sys
 
-    if len(sys.argv) < 2:
-        results_dir = 'results'
-    else:
-        results_dir = sys.argv[1]
+    org_name = sys.argv[1]
+    repo_name = sys.argv[2]
+    results_dir = sys.argv[3]
 
     # Aggregate results
-    results = aggregate_results(results_dir)
+    results = aggregate_results(org_name, repo_name, results_dir)
 
     # Save aggregated results to violations.json
     save_aggregated_results(results, results_dir)

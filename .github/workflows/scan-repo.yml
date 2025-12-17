@@ -133,7 +133,7 @@ jobs:
 
       - name: Aggregate results
         run: |
-          uv run python -m vmcp.cli aggregate --results-dir results
+          uv run python -m vmcp.cli aggregate "${{ inputs.repo_url }}" --results-dir results
 
       - name: Create Pull Request
         env:
