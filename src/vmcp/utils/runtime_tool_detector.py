@@ -69,10 +69,15 @@ class RuntimeToolDetector:
             # Python FastMCP patterns
             'server.py',
             'main.py',
+            '__main__.py',
             'src/server.py',
             'src/main.py',
+            'src/__main__.py',
             'src/**/server.py',
             'src/**/main.py',
+            '**/server.py',
+            '**/main.py',
+            '**/__main__.py',
             # TypeScript patterns
             'index.ts',
             'server.ts',
@@ -138,9 +143,28 @@ class RuntimeToolDetector:
         """Determine command to run the MCP server."""
         # Python servers
         if entry_point.suffix == '.py':
-            # Try uv first (modern Python package manager)
-            if (self.repo_path / 'pyproject.toml').exists():
+            # Check for pyproject.toml with script entry point
+            pyproject_file = self.repo_path / 'pyproject.toml'
+            if pyproject_file.exists():
+                try:
+                    import tomllib
+                    content = pyproject_file.read_text()
+                    config = tomllib.loads(content)
+
+                    # Check for [project.scripts] entry point
+                    scripts = config.get('project', {}).get('scripts', {})
+                    if scripts:
+                        # Use first script entry point
+                        script_name = next(iter(scripts.keys()))
+                        print(f"  Found script entry: {script_name}")
+                        # Install package first, then run script
+                        return ['sh', '-c', f'cd {self.repo_path} && uv pip install -e . --quiet && uv run {script_name}']
+                except Exception:
+                    pass
+
+                # Fall back to direct python execution with uv
                 return ['uv', 'run', 'python', str(entry_point)]
+
             # Fall back to python
             return ['python', str(entry_point)]
 
@@ -191,46 +215,72 @@ class RuntimeToolDetector:
                 cwd=str(self.repo_path),
             )
 
-            # Build tools/list request (MCP JSON-RPC format)
-            request = {
+            # MCP protocol requires initialization handshake first
+            # 1. Send initialize request
+            init_request = {
                 "jsonrpc": "2.0",
                 "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "vmcp-tool-detector",
+                        "version": "1.0.0"
+                    }
+                }
+            }
+
+            # 2. Send tools/list request
+            tools_request = {
+                "jsonrpc": "2.0",
+                "id": 2,
                 "method": "tools/list",
                 "params": {}
             }
-            request_json = json.dumps(request) + '\n'
 
-            # Send request and wait for response
+            # Send both requests
+            requests = json.dumps(init_request) + '\n' + json.dumps(tools_request) + '\n'
+
+            # Send requests and wait for responses
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(request_json.encode()),
+                process.stdin.write(requests.encode())
+                await process.stdin.drain()
+
+                # Read responses with timeout
+                stdout_data = await asyncio.wait_for(
+                    process.stdout.read(1024 * 100),  # Read up to 100KB
                     timeout=self.timeout
                 )
+
+                # Close process
+                process.stdin.close()
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=2)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
+
             except asyncio.TimeoutError:
                 process.kill()
                 await process.wait()
                 raise
 
-            # Parse response
-            if stdout:
+            # Parse responses
+            if stdout_data:
                 # MCP servers send JSON-RPC responses line by line
-                for line in stdout.decode().strip().split('\n'):
+                for line in stdout_data.decode('utf-8', errors='ignore').strip().split('\n'):
                     if not line:
                         continue
                     try:
                         response = json.loads(line)
                         # Check if this is the tools/list response
-                        if response.get('id') == 1 and 'result' in response:
+                        if response.get('id') == 2 and 'result' in response:
                             tools = response['result'].get('tools', [])
-                            return tools
+                            if tools:
+                                return tools
                     except json.JSONDecodeError:
                         continue
-
-            # Log stderr for debugging
-            if stderr:
-                stderr_text = stderr.decode().strip()
-                if stderr_text:
-                    print(f"  Server stderr: {stderr_text[:200]}")
 
             return None
 
