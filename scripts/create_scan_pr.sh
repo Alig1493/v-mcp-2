@@ -87,7 +87,6 @@ if ! git diff --quiet || ! git diff --cached --quiet || [[ -n $(git ls-files --o
     SCAN_TYPE="tool-based"
     RESULTS_DESC="
 Results (tool-based):
-- tool-violations.json: results_tools/${ORG_NAME}-${REPO_NAME}-tool-violations.json
 - tools.json: results_tools/${ORG_NAME}-${REPO_NAME}-tools.json
 - Summary: SCAN_RESULTS_TOOLS.md"
   else
@@ -117,26 +116,27 @@ ${RESULTS_DESC}
 
   if [[ "${SCAN_TYPE}" == "tool-based" ]]; then
     # Tool-based scan
-    VIOLATIONS_FILE="results_tools/${ORG_NAME}-${REPO_NAME}-tool-violations.json"
     TOOLS_FILE="results_tools/${ORG_NAME}-${REPO_NAME}-tools.json"
 
-    if [[ -f "${VIOLATIONS_FILE}" ]] && command -v jq &> /dev/null; then
-      TOTAL_VULNS=$(jq '[.[][] | to_entries[] | .value | length] | add' "${VIOLATIONS_FILE}" 2>/dev/null || echo "0")
+    if [[ -f "${TOOLS_FILE}" ]] && command -v jq &> /dev/null; then
+      # Count total vulnerabilities across all tools and scanners
+      TOTAL_VULNS=$(jq '[.[] | to_entries[] | select(.key != "name" and .key != "file_path" and .key != "description" and .key != "line_number" and .key != "language") | .value | length] | add' "${TOOLS_FILE}" 2>/dev/null || echo "0")
+      NUM_TOOLS=$(jq 'length' "${TOOLS_FILE}" 2>/dev/null || echo "0")
       VULN_SUMMARY="
-**Total Vulnerabilities Found:** ${TOTAL_VULNS}"
+**Total Vulnerabilities Found:** ${TOTAL_VULNS}
+**Tools Scanned:** ${NUM_TOOLS}"
     fi
 
     WHAT_INCLUDED="### 📊 What's Included
 
-- \`results_tools/${ORG_NAME}-${REPO_NAME}-tool-violations.json\` - Vulnerabilities grouped by MCP tool
-- \`results_tools/${ORG_NAME}-${REPO_NAME}-tools.json\` - Detected MCP tools metadata
-- \`SCAN_RESULTS_TOOLS.md\` - Aggregated summary table by tool"
+- \`results_tools/${ORG_NAME}-${REPO_NAME}-tools.json\` - Vulnerabilities grouped by MCP tool with scanner results
+- \`SCAN_RESULTS_TOOLS.md\` - Aggregated summary table"
 
     REVIEW_CHECKLIST="### 📝 Review Checklist
 
 - [ ] Review \`SCAN_RESULTS_TOOLS.md\` for tool-level vulnerability summary
 - [ ] Check which MCP tools have the most vulnerabilities
-- [ ] Review tool metadata in \`*-tools.json\`
+- [ ] Review detailed findings in \`*-tools.json\`
 - [ ] Prioritize fixes for high-risk tools
 - [ ] Decide on next actions for critical tool vulnerabilities"
   else

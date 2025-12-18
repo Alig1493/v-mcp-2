@@ -15,38 +15,50 @@ Traditional vulnerability scanning groups results by scanner (Trivy, OSV-Scanner
 
 ## File Format
 
-### Tool Violations File
-
-`<org>-<repo>-tool-violations.json`:
-```json
-{
-  "scanner_name": {
-    "tool_name": [
-      { /* vulnerability details */ }
-    ],
-    "dependencies": [
-      { /* dependency vulnerabilities */ }
-    ],
-    "unknown": [
-      { /* vulnerabilities not mapped to specific tools */ }
-    ]
-  }
-}
-```
-
-### Tools Metadata File
+### Tools File (One Per Repository)
 
 `<org>-<repo>-tools.json`:
 ```json
 [
   {
-    "name": "tool_name",
-    "file_path": "src/tools/tool.py",
-    "description": "What the tool does",
-    "line_number": 42
+    "name": "get_temporal_context",
+    "file_path": "vuln_nist_mcp_server.py",
+    "description": "Retrieve a CVE by its CVE-ID",
+    "line_number": 75,
+    "language": "python",
+    "trivy": [
+      {
+        "id": "CVE-2024-1234",
+        "severity": "HIGH",
+        "file_location": "vuln_nist_mcp_server.py",
+        ...
+      }
+    ],
+    "semgrep": [
+      {
+        "id": "python.lang.security.sql-injection",
+        "severity": "HIGH",
+        ...
+      }
+    ]
+  },
+  {
+    "name": "dependencies",
+    "file_path": "",
+    "description": "Project dependencies",
+    "line_number": null,
+    "language": "N/A",
+    "trivy": [...],
+    "osv-scanner": [...]
   }
 ]
 ```
+
+**Key Features:**
+- One file per repository
+- Tool metadata (name, file_path, description, etc.)
+- Scanner results nested under scanner names
+- Special categories: `dependencies`, `unknown`
 
 ## Usage
 
@@ -171,9 +183,8 @@ project/
 │   └── SCAN_RESULTS.md
 │
 └── results_tools/              # Tool-based scan results (default)
-    ├── org-repo-tool-violations.json
-    ├── org-repo-tools.json
-    └── SCAN_RESULTS_TOOLS.md
+    ├── org-repo-tools.json      # Single file per repo
+    └── SCAN_RESULTS_TOOLS.md    # Summary table (one row per repo)
 ```
 
 **Why separate directories?**
@@ -182,21 +193,27 @@ project/
 - Different report outputs (SCAN_RESULTS.md vs SCAN_RESULTS_TOOLS.md)
 - Easier to manage and clean up
 
+**Temporary Files (Deleted After Aggregation):**
+- `{scanner}-tool-violations.json` - Scanner-specific results (parallel scan)
+- `{org}-{repo}-tools-metadata.json` - Tool metadata (parallel scan)
+
 ## Comparison: Regular vs Tool-Based Scanning
 
 ### Regular Scanning
 - **Format**: `{"scanner": [vulns]}`
-- **Output**: `SCAN_RESULTS.md`
+- **Output**: One file per repo (`org-repo-violations.json`)
+- **Report**: `SCAN_RESULTS.md` - One row per repo
 - **Directory**: `results/`
 - **Grouping**: By scanner type
 - **Use Case**: General vulnerability assessment
 
 ### Tool-Based Scanning
-- **Format**: `{"scanner": {"tool": [vulns]}}`
-- **Output**: `SCAN_RESULTS_TOOLS.md`
+- **Format**: `[{"name": "tool", "scanner1": [vulns], "scanner2": [vulns]}]`
+- **Output**: One file per repo (`org-repo-tools.json`)
+- **Report**: `SCAN_RESULTS_TOOLS.md` - One row per repo with tool list
 - **Directory**: `results_tools/`
-- **Grouping**: By scanner AND tool
-- **Use Case**: MCP-specific risk assessment
+- **Grouping**: By tool with scanner results nested
+- **Use Case**: MCP-specific risk assessment per tool
 
 ## Limitations
 
