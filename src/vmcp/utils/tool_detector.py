@@ -83,10 +83,10 @@ class PythonToolDetector(BaseLanguageDetector):
 
     # Python patterns for tool decorators
     TOOL_PATTERNS = [
-        # @mcp.tool() or @server.tool()
-        re.compile(r'@(?:mcp|server)\.tool\(\s*(?:name=[\"\']([^\"\']+)[\"\'])?\s*\)\s*(?:async\s+)?def\s+(\w+)', re.MULTILINE),
-        # @tool decorator (from fastmcp)
-        re.compile(r'@tool\(\s*(?:name=[\"\']([^\"\']+)[\"\'])?\s*\)\s*(?:async\s+)?def\s+(\w+)', re.MULTILINE),
+        # @mcp.tool() or @server.tool() (allows newlines between decorator and def)
+        re.compile(r'@(?:mcp|server)\.tool\(\s*(?:name=[\"\']([^\"\']+)[\"\'])?\s*\)\s*\n\s*(?:async\s+)?def\s+(\w+)', re.MULTILINE),
+        # @tool decorator (from fastmcp) (allows newlines between decorator and def)
+        re.compile(r'@tool\(\s*(?:name=[\"\']([^\"\']+)[\"\'])?\s*\)\s*\n\s*(?:async\s+)?def\s+(\w+)', re.MULTILINE),
     ]
 
     @property
