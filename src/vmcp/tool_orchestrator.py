@@ -124,7 +124,7 @@ class ToolBasedScanOrchestrator(ScanOrchestrator):
 
         Format per file: {"scanner": {"tool_name": [vulns]}}
         Filename pattern: <scanner>-tool-violations.json
-        These files will be merged during aggregation into org-repo-tool-violations.json
+        These will be merged during aggregation into org-repo-tools.json
         """
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
@@ -144,8 +144,8 @@ class ToolBasedScanOrchestrator(ScanOrchestrator):
 
             print(f"Tool-based results for {scanner} saved to {scanner_file}")
 
-        # Save tool metadata once (not scanner-specific)
-        tools_metadata_file = output_path / f'{self.org_name}-{self.repo_name}-tools.json'
+        # Save tool metadata to scanner-specific file (will be merged during aggregation)
+        tools_metadata_file = output_path / f'{self.org_name}-{self.repo_name}-tools-metadata.json'
         tools_data = [tool.to_dict() for tool in self.tools]
         with open(tools_metadata_file, 'w') as f:
             json.dump(tools_data, f, indent=2)
