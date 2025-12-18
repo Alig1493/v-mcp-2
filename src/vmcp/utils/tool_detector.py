@@ -3,6 +3,7 @@
 Detects and extracts tool definitions from MCP server codebases.
 Extensible architecture with language-specific detectors.
 """
+import asyncio
 import json
 import re
 from abc import ABC, abstractmethod
@@ -242,26 +243,58 @@ class ToolDetector:
         # Add new language detectors here
     ]
 
-    def __init__(self, repo_path: str):
+    def __init__(self, repo_path: str, use_runtime_detection: bool = True):
         self.repo_path = Path(repo_path)
         self.tools: list[MCPTool] = []
         self.detectors: list[BaseLanguageDetector] = []
+        self.use_runtime_detection = use_runtime_detection
 
         # Initialize all detectors
         for detector_class in self.DETECTOR_CLASSES:
             self.detectors.append(detector_class(self.repo_path))
 
     def detect_tools(self) -> list[MCPTool]:
-        """Detect all tools in the repository using all language detectors."""
+        """
+        Detect all tools in the repository.
+
+        Uses hybrid approach:
+        1. Try runtime detection first (more accurate)
+        2. Fall back to static detection if runtime fails
+        """
         self.tools = []
 
-        # Run all detectors
+        # Try runtime detection first
+        if self.use_runtime_detection:
+            print("🔍 Attempting runtime tool detection...")
+            try:
+                # Import here to avoid circular dependency
+                from vmcp.utils.runtime_tool_detector import detect_tools_runtime
+
+                # Run async detection
+                runtime_tools = asyncio.run(detect_tools_runtime(str(self.repo_path)))
+
+                if runtime_tools:
+                    self.tools = runtime_tools
+                    print(f"✅ Runtime detection found {len(runtime_tools)} tools")
+                    return self.tools
+                else:
+                    print("⚠️  Runtime detection returned no tools, falling back to static analysis")
+            except Exception as e:
+                print(f"⚠️  Runtime detection failed: {e}")
+                print("   Falling back to static analysis...")
+
+        # Fall back to static detection
+        print("🔍 Running static tool detection...")
         for detector in self.detectors:
             detected_tools = detector.detect_all_tools()
             self.tools.extend(detected_tools)
 
+        if self.tools:
+            print(f"✅ Static detection found {len(self.tools)} tools")
+
         # If no tools found, check if this is an MCP server and create a default tool
         if not self.tools and self._is_any_mcp_server():
+            print("⚠️  No tools detected, but repository appears to be an MCP server")
             self.tools.append(MCPTool(
                 name='unknown',
                 file_path=str(self.repo_path),
