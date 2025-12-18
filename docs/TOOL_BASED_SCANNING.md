@@ -53,21 +53,24 @@ Traditional vulnerability scanning groups results by scanner (Trivy, OSV-Scanner
 ### Scanning with Tool Grouping
 
 ```bash
-# Scan a repository and group by tools
+# Scan a repository and group by tools (defaults to results_tools/ directory)
 uv run python -m vmcp.cli scan-tool https://github.com/org/mcp-server
 
 # Scan with specific scanners
 uv run python -m vmcp.cli scan-tool https://github.com/org/mcp-server --scanners trivy semgrep
 
 # Custom output directory
-uv run python -m vmcp.cli scan-tool https://github.com/org/mcp-server --output-dir results_tools
+uv run python -m vmcp.cli scan-tool https://github.com/org/mcp-server --output-dir custom_dir
 ```
 
 ### Aggregating Tool-Based Results
 
 ```bash
-# Aggregate tool-based results and generate SCAN_RESULTS_TOOLS.md
-uv run python -m vmcp.cli aggregate-tool https://github.com/org/mcp-server --results-dir results_tools
+# Aggregate tool-based results and generate SCAN_RESULTS_TOOLS.md (defaults to results_tools/)
+uv run python -m vmcp.cli aggregate-tool https://github.com/org/mcp-server
+
+# Specify custom results directory
+uv run python -m vmcp.cli aggregate-tool https://github.com/org/mcp-server --results-dir custom_dir
 ```
 
 ## Tool Detection
@@ -128,31 +131,55 @@ Tool-based scanning generates a separate markdown report showing vulnerabilities
 ## Example Workflow
 
 ```bash
-# 1. Scan multiple MCP repositories with tool grouping
+# 1. Scan multiple MCP repositories with tool grouping (uses results_tools/ by default)
 for repo in repo1 repo2 repo3; do
-    uv run python -m vmcp.cli scan-tool https://github.com/org/$repo --output-dir tool_results
+    uv run python -m vmcp.cli scan-tool https://github.com/org/$repo
 done
 
 # 2. Aggregate results for each repository
 for repo in repo1 repo2 repo3; do
-    uv run python -m vmcp.cli aggregate-tool https://github.com/org/$repo --results-dir tool_results
+    uv run python -m vmcp.cli aggregate-tool https://github.com/org/$repo
 done
 
 # 3. View the tool-based summary
 cat SCAN_RESULTS_TOOLS.md
 ```
 
+## Directory Structure
+
+Tool-based scanning uses a separate directory structure to keep results organized:
+
+```
+project/
+├── results/                    # Regular scan results
+│   ├── org-repo-violations.json
+│   └── SCAN_RESULTS.md
+│
+└── results_tools/              # Tool-based scan results (default)
+    ├── org-repo-tool-violations.json
+    ├── org-repo-tools.json
+    └── SCAN_RESULTS_TOOLS.md
+```
+
+**Why separate directories?**
+- Prevents confusion between regular and tool-based results
+- Different file formats and naming conventions
+- Different report outputs (SCAN_RESULTS.md vs SCAN_RESULTS_TOOLS.md)
+- Easier to manage and clean up
+
 ## Comparison: Regular vs Tool-Based Scanning
 
 ### Regular Scanning
 - **Format**: `{"scanner": [vulns]}`
 - **Output**: `SCAN_RESULTS.md`
+- **Directory**: `results/`
 - **Grouping**: By scanner type
 - **Use Case**: General vulnerability assessment
 
 ### Tool-Based Scanning
 - **Format**: `{"scanner": {"tool": [vulns]}}`
 - **Output**: `SCAN_RESULTS_TOOLS.md`
+- **Directory**: `results_tools/`
 - **Grouping**: By scanner AND tool
 - **Use Case**: MCP-specific risk assessment
 

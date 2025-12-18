@@ -135,7 +135,7 @@ def main():
     # Scan-tool command
     scan_tool_parser = subparsers.add_parser('scan-tool', help='Scan a repository and group by MCP tools')
     scan_tool_parser.add_argument('repo_url', help='Repository URL to scan')
-    scan_tool_parser.add_argument('--output-dir', default='results', help='Output directory for results')
+    scan_tool_parser.add_argument('--output-dir', default='results_tools', help='Output directory for tool-based results')
     scan_tool_parser.add_argument('--scanners', nargs='+', help='Specific scanners to use')
 
     # Aggregate command
@@ -146,7 +146,7 @@ def main():
     # Aggregate-tool command
     agg_tool_parser = subparsers.add_parser('aggregate-tool', help='Aggregate tool-based scan results')
     agg_tool_parser.add_argument('repo_url', help='Repository URL to scan')
-    agg_tool_parser.add_argument('--results-dir', default='results', help='Results directory')
+    agg_tool_parser.add_argument('--results-dir', default='results_tools', help='Tool-based results directory')
 
     args = parser.parse_args()
 
