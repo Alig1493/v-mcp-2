@@ -12,6 +12,7 @@ from vmcp.models import VulnerabilityModel
 from vmcp.orchestrator import SCANNER_MAP, ScanOrchestrator
 from vmcp.scanners.base import BaseScanner
 from vmcp.utils.tool_detector import ToolDetector, MCPTool
+from vmcp.utils.call_graph import build_tool_call_graphs
 
 
 class ToolBasedScanOrchestrator(ScanOrchestrator):
@@ -44,6 +45,12 @@ class ToolBasedScanOrchestrator(ScanOrchestrator):
         for tool in self.tools:
             print(f"  - {tool.name} ({tool.file_path})")
 
+        # Build call graphs for each tool to track dependencies
+        print("Building call graphs for tools...")
+        self.tool_call_graphs = build_tool_call_graphs(self.tools, self.repo_path)
+        for tool_name, dependencies in self.tool_call_graphs.items():
+            print(f"  {tool_name} depends on {len(dependencies)} files")
+
         # Run all scanners normally
         scanner_results = await self.run_all_scanners(scanner_names)
 
@@ -62,9 +69,13 @@ class ToolBasedScanOrchestrator(ScanOrchestrator):
         Group vulnerabilities by the tool they belong to.
 
         Logic:
-        - If vulnerability file_location matches a tool's file, assign to that tool
-        - If vulnerability is in a dependency, assign to 'dependencies'
+        - If vulnerability file_location is in a tool's call graph, assign to that tool
+        - If vulnerability is in a dependency file, assign to 'dependencies'
         - Otherwise, assign to 'unknown'
+
+        Uses call graph analysis to detect transitive vulnerabilities:
+        - Direct file match: vuln in server.py → tool in server.py
+        - Transitive match: vuln in helper.py → tool that imports helper.py
         """
         tool_vulns: dict[str, list[VulnerabilityModel]] = {}
 
@@ -75,11 +86,6 @@ class ToolBasedScanOrchestrator(ScanOrchestrator):
         # Special categories
         tool_vulns['dependencies'] = []
         tool_vulns['unknown'] = []
-
-        # Build tool file path map for fast lookup
-        tool_by_file: dict[str, MCPTool] = {}
-        for tool in self.tools:
-            tool_by_file[tool.file_path] = tool
 
         # Dependency file patterns
         dependency_files = {
@@ -92,7 +98,7 @@ class ToolBasedScanOrchestrator(ScanOrchestrator):
         for vuln in vulnerabilities:
             assigned = False
 
-            # Check if vulnerability is in a specific tool file
+            # Check if vulnerability is in a specific tool file or its dependencies
             if vuln.file_location:
                 # Normalize path
                 file_path = vuln.file_location.replace(f"{self.repo_path}/", "")
@@ -102,17 +108,12 @@ class ToolBasedScanOrchestrator(ScanOrchestrator):
                 if file_name in dependency_files:
                     tool_vulns['dependencies'].append(vuln)
                     assigned = True
-                # Direct file match with tool file
-                elif file_path in tool_by_file:
-                    tool_name = tool_by_file[file_path].name
-                    tool_vulns[tool_name].append(vuln)
-                    assigned = True
                 else:
-                    # Check if file is in the same directory as a tool
-                    for tool_file, tool in tool_by_file.items():
-                        tool_dir = str(Path(tool_file).parent)
-                        if tool_dir and file_path.startswith(tool_dir):
-                            tool_vulns[tool.name].append(vuln)
+                    # Use call graph to check if file is in any tool's dependency tree
+                    # This catches both direct matches and transitive dependencies
+                    for tool_name, dependencies in self.tool_call_graphs.items():
+                        if file_path in dependencies:
+                            tool_vulns[tool_name].append(vuln)
                             assigned = True
                             break
 
