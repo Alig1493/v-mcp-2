@@ -44,4 +44,4 @@
 | [roadwy/cve-search_mcp](https://github.com/roadwy/cve-search_mcp) | [📋](results/roadwy-cve-search_mcp-violations.json) | 12 | 1 | 7 | 4 | 0 | 11 | osv-scanner, semgrep, trivy | 🔴 |
 | [safedep/vet](https://github.com/safedep/vet) | [📋](results/safedep-vet-violations.json) | 205 | 17 | 89 | 91 | 8 | 193 | osv-scanner, semgrep, trivy | 🔴 |
 | [securityfortech/secops-mcp](https://github.com/securityfortech/secops-mcp) | [📋](results/securityfortech-secops-mcp-violations.json) | 12 | 1 | 7 | 4 | 0 | 11 | osv-scanner, semgrep, trivy | 🔴 |
-| [slouchd/cyberchef-api-mcp-server](https://github.com/slouchd/cyberchef-api-mcp-server) | [📋](results/slouchd-cyberchef-api-mcp-server-violations.json) | 7 | 1 | 5 | 1 | 0 | 6 | osv-scanner, semgrep, trivy | 🔴 |
+| [slouchd/cyberchef-api-mcp-server](https://github.com/slouchd/cyberchef-api-mcp-server) | [📋](results/slouchd-cyberchef-api-mcp-server-violations.json) | 7 | 1 | 5 | 1 | 0 | 6 | osv-scanner, semgrep, trivy, yara | 🔴 |

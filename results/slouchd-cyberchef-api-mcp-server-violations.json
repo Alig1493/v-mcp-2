@@ -381,11 +381,12 @@
       "rule_name": "dockerfile.security.missing-user.missing-user",
       "rule_id": "dockerfile.security.missing-user.missing-user",
       "confidence": "MEDIUM",
-      "file_location": "/tmp/tmpd3q6s433/cyberchef-api-mcp-server/Dockerfile",
+      "file_location": "Dockerfile",
       "line_range": "31-31",
       "categories": [
         "CWE-250: Execution with Unnecessary Privileges"
       ]
     }
-  ]
+  ],
+  "yara": []
 }
