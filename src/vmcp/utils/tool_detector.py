@@ -233,6 +233,83 @@ class TypeScriptToolDetector(BaseLanguageDetector):
         return False
 
 
+class GoToolDetector(BaseLanguageDetector):
+    """Detects MCP tools in Go code (mcp-go library)."""
+
+    # Go patterns for MCP tools
+    TOOL_PATTERNS = [
+        # mcpgo.NewTool("tool_name", ...)
+        re.compile(r'mcpgo\.NewTool\s*\(\s*["\']([^"\']+)["\']', re.MULTILINE),
+        # Alternative: mcp.NewTool("tool_name", ...)
+        re.compile(r'mcp\.NewTool\s*\(\s*["\']([^"\']+)["\']', re.MULTILINE),
+    ]
+
+    @property
+    def language_name(self) -> str:
+        return "go"
+
+    @property
+    def file_extensions(self) -> list[str]:
+        return [".go"]
+
+    def is_mcp_server(self) -> bool:
+        """Check if repository contains a Go MCP server."""
+        # Look for mcp-go imports
+        for go_file in self.repo_path.rglob('*.go'):
+            try:
+                content = go_file.read_text(encoding='utf-8', errors='ignore')
+                if 'github.com/mark3labs/mcp-go' in content or 'mcp.McpTool' in content:
+                    return True
+            except Exception:
+                continue
+        return False
+
+    def detect_tools_in_file(self, file_path: Path) -> list[MCPTool]:
+        """Detect MCP tools in a Go file."""
+        try:
+            content = file_path.read_text(encoding='utf-8', errors='ignore')
+            tools = []
+
+            # Check if this file implements mcp.McpTool interface
+            if 'mcp.McpTool' not in content and 'McpTool' not in content:
+                return []
+
+            # Find all tool definitions using NewTool
+            for pattern in self.TOOL_PATTERNS:
+                for match in pattern.finditer(content):
+                    tool_name = match.group(1)
+                    line_number = content[:match.start()].count('\n') + 1
+
+                    # Try to find description nearby
+                    description = self._extract_description(content, match.start())
+
+                    tools.append(MCPTool(
+                        name=tool_name,
+                        file_path=str(file_path.relative_to(self.repo_path)),
+                        description=description,
+                        line_number=line_number,
+                        language='go'
+                    ))
+
+            return tools
+
+        except Exception:
+            return []
+
+    def _extract_description(self, content: str, match_pos: int) -> str:
+        """Extract tool description from WithDescription() call."""
+        # Look for WithDescription("...") near the match
+        desc_pattern = re.compile(r'WithDescription\s*\(\s*["\']([^"\']+)["\']')
+
+        # Search in the next 500 characters
+        snippet = content[match_pos:match_pos + 500]
+        match = desc_pattern.search(snippet)
+
+        if match:
+            return match.group(1)
+        return ""
+
+
 class ToolDetector:
     """Main MCP tool detector that coordinates all language-specific detectors."""
 
@@ -240,6 +317,7 @@ class ToolDetector:
     DETECTOR_CLASSES = [
         PythonToolDetector,
         TypeScriptToolDetector,
+        GoToolDetector,
         # Add new language detectors here
     ]
 
