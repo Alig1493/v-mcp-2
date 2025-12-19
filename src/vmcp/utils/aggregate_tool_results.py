@@ -124,15 +124,25 @@ def save_tool_results(
     """
     Save aggregated tool-based results to per-repo tools.json file.
 
-    Format: [{"name": "tool", "file_path": "...", "scanner1": [vulns], ...}]
+    Format: {
+        "tool_name": {"file_path": "...", "description": "...", "scanner1": [vulns], ...},
+        "dependencies": {"file_path": "", "description": "...", "trivy": [vulns], ...},
+        "unknown": {"file_path": "", "description": "...", "semgrep": [vulns], ...}
+    }
     """
     results_path = Path(results_dir)
     results_path.mkdir(parents=True, exist_ok=True)
 
+    # Convert list to dict with tool names as keys
+    tools_dict = {}
+    for tool in results:
+        tool_name = tool.pop('name')  # Remove 'name' from the dict
+        tools_dict[tool_name] = tool
+
     # Save to org-repo-tools.json
     tools_file = results_path / f'{org_name}-{repo_name}-tools.json'
     with open(tools_file, 'w') as f:
-        json.dump(results, f, indent=2, default=str)
+        json.dump(tools_dict, f, indent=2, default=str)
 
     print(f"Saved tool-based results to {tools_file}")
 
@@ -168,7 +178,7 @@ def generate_tool_summary_table(results_dir: str) -> str:
         org_name, repo_name = filename_parts
         org_repo = f"{org_name}/{repo_name}"
 
-        # Load tool-based results
+        # Load tool-based results (now a dict with tool names as keys)
         with open(json_file, 'r') as f:
             tools_data = json.load(f)
 
@@ -177,26 +187,26 @@ def generate_tool_summary_table(results_dir: str) -> str:
         dependencies_entry = None
         unknown_entry = None
 
-        for tool in tools_data:
-            if tool['name'] == 'dependencies':
-                dependencies_entry = tool
-            elif tool['name'] == 'unknown':
-                unknown_entry = tool
+        for tool_name, tool_data in tools_data.items():
+            if tool_name == 'dependencies':
+                dependencies_entry = tool_data
+            elif tool_name == 'unknown':
+                unknown_entry = tool_data
             else:
                 # Actual MCP tool
-                actual_tools.append(tool)
+                actual_tools.append({'name': tool_name, **tool_data})
 
         # Collect all vulnerabilities across all categories
         all_vulnerabilities = []
         all_scanners = set()
 
-        for tool in tools_data:
+        for tool_name, tool_data in tools_data.items():
             # Get all scanner keys (exclude metadata fields)
-            scanner_keys = [k for k in tool.keys() if k not in ['name', 'file_path', 'description', 'line_number', 'language']]
+            scanner_keys = [k for k in tool_data.keys() if k not in ['file_path', 'description', 'line_number', 'language']]
             all_scanners.update(scanner_keys)
 
             for scanner_key in scanner_keys:
-                all_vulnerabilities.extend(tool[scanner_key])
+                all_vulnerabilities.extend(tool_data[scanner_key])
 
         if not all_vulnerabilities:
             continue  # Skip repos with no vulnerabilities
@@ -227,13 +237,13 @@ def generate_tool_summary_table(results_dir: str) -> str:
         # Count vulnerabilities in dependencies
         deps_count = 0
         if dependencies_entry:
-            for scanner_key in [k for k in dependencies_entry.keys() if k not in ['name', 'file_path', 'description', 'line_number', 'language']]:
+            for scanner_key in [k for k in dependencies_entry.keys() if k not in ['file_path', 'description', 'line_number', 'language']]:
                 deps_count += len(dependencies_entry[scanner_key])
 
         # Count vulnerabilities in unknown
         unknown_count = 0
         if unknown_entry:
-            for scanner_key in [k for k in unknown_entry.keys() if k not in ['name', 'file_path', 'description', 'line_number', 'language']]:
+            for scanner_key in [k for k in unknown_entry.keys() if k not in ['file_path', 'description', 'line_number', 'language']]:
                 unknown_count += len(unknown_entry[scanner_key])
 
         # Store row data with sort key

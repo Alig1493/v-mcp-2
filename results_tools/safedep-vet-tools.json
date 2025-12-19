@@ -1,6 +1,5 @@
-[
-  {
-    "name": "vet_query_sql_introspect_schema",
+{
+  "vet_query_sql_introspect_schema": {
     "file_path": "mcp/tools/vet_query.go",
     "description": "Introspect the SQLite3 database schema to understand available tables and their structure. ",
     "line_number": 74,
@@ -62,8 +61,7 @@
       }
     ]
   },
-  {
-    "name": "dependencies",
+  "dependencies": {
     "file_path": "",
     "description": "Project dependencies",
     "line_number": null,
@@ -22591,8 +22589,7 @@
       }
     ]
   },
-  {
-    "name": "unknown",
+  "unknown": {
     "file_path": "",
     "description": "Unclassified vulnerabilities",
     "line_number": null,
@@ -22816,4 +22813,4 @@
       }
     ]
   }
-]
+}
